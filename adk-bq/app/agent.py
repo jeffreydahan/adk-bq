@@ -72,7 +72,7 @@ def dynamic_token_injection(tool: BaseTool, args: Dict[str, Any], tool_context: 
     # tool_context.state[auth_id] = os.getenv("ADK_ACCESS_TOKEN")
 
     state_dict = tool_context.state.to_dict()
-    print("Current Tool Context State:", state_dict)
+    # print("Current Tool Context State:", state_dict)
 
     if auth_id in state_dict:
         access_token = state_dict[auth_id]
