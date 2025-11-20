@@ -63,27 +63,25 @@ print("Libraries imported.")
 
 project_id = os.getenv("GOOGLE_CLOUD_PROJECT")
 
-auth_id="bq_dynamic_oauth" 
+auth_id=os.getenv("BQ_AUTHORIZATION_ID") 
 dynamic_auth_param_name = "dynamic_auth_config" # Name of the parameter to inject
 dynamic_auth_internal_key = "oauth2_auth_code_flow.access_token" # Internal key for the token
 
 def dynamic_token_injection(tool: BaseTool, args: Dict[str, Any], tool_context: ToolContext) -> Optional[Dict]:
-    token_key = None
-    # Uncomment when you want to test locally, you must obtain a valid access token yourself.
-    tool_context.state['temp:'+auth_id+'_0'] = os.getenv("ADK_ACCESS_TOKEN")
-    pattern = re.compile(r'^temp:'+auth_id+'.*')
+    # For local testing, uncomment the line below and set the ADK_ACCESS_TOKEN env var.
+    # tool_context.state[auth_id] = os.getenv("ADK_ACCESS_TOKEN")
 
     state_dict = tool_context.state.to_dict()
     print("Current Tool Context State:", state_dict)
-    matched_auth = {key: value for key, value in state_dict.items() if pattern.match(key)}
-    if len(matched_auth) > 0:
-        token_key = list(matched_auth.keys())[0]
+
+    if auth_id in state_dict:
+        access_token = state_dict[auth_id]
+        dynamic_auth_config = {dynamic_auth_internal_key: access_token}
+        args[dynamic_auth_param_name] = json.dumps(dynamic_auth_config)
     else:
-        print("No valid tokens found")
+        print(f"No valid token found for key: {auth_id}")
         return None
-    access_token = tool_context.state[token_key]
-    dynamic_auth_config = {dynamic_auth_internal_key: access_token}
-    args[dynamic_auth_param_name] = json.dumps(dynamic_auth_config)
+    
     return None
 
 # Define the bqoauth Agent with tools and instructions
