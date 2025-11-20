@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 import google.auth
 from google.adk.tools.application_integration_tool.application_integration_toolset import ApplicationIntegrationToolset
 
-from .oauth import oauth2_scheme, oauth2_credential
+#from .oauth import oauth2_scheme, oauth2_credential
 
 from .prompts import app_int_cloud_bqoauth_instructions
 load_dotenv()

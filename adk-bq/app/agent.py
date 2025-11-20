@@ -46,6 +46,9 @@ from google.adk.agents.callback_context import CallbackContext
 from google.oauth2.credentials import Credentials
 from google.adk.tools.base_tool import BaseTool
 
+import google.auth
+import google.auth.transport.requests
+
 from fastapi.openapi.models import OAuth2
 from fastapi.openapi.models import OAuthFlowAuthorizationCode
 from fastapi.openapi.models import OAuthFlows
@@ -68,11 +71,23 @@ dynamic_auth_param_name = "dynamic_auth_config" # Name of the parameter to injec
 dynamic_auth_internal_key = "oauth2_auth_code_flow.access_token" # Internal key for the token
 
 def dynamic_token_injection(tool: BaseTool, args: Dict[str, Any], tool_context: ToolContext) -> Optional[Dict]:
-    # For local testing, uncomment the line below and set the ADK_ACCESS_TOKEN env var.
-    # tool_context.state[auth_id] = os.getenv("ADK_ACCESS_TOKEN")
+    # If not running in a deployed Cloud Run environment (e.g., running locally)
+    if not os.getenv("K_SERVICE"):
+        try:
+            credentials, project = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
+            request = google.auth.transport.requests.Request()
+            credentials.refresh(request)
+            token = credentials.token
+            tool_context.state[auth_id] = token
+            print("Running locally, obtained token using google-auth.")
+        except Exception as e:
+            print(f"Could not get access token using google-auth: {e}")
+            # Fallback to trying to find the token in the state, in case it was set by other means
+            pass
+    else:
+        print("Running in Agent Engine or Gemini Enterprise. OAUTH handled automatically.")
 
     state_dict = tool_context.state.to_dict()
-    # print("Current Tool Context State:", state_dict)
 
     if auth_id in state_dict:
         access_token = state_dict[auth_id]

@@ -174,7 +174,7 @@ def deploy_agent_engine_app(
     env_vars = {**env_vars_from_file, **env_vars_from_cli}
 
     # Exclude reserved environment variables
-    reserved_vars = ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION"]
+    reserved_vars = ["GOOGLE_CLOUD_PROJECT", "GOOGLE_CLOUD_LOCATION", "ADK_ACCESS_TOKEN"]
     for var in reserved_vars:
         if var in env_vars:
             del env_vars[var]
