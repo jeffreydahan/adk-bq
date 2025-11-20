@@ -100,23 +100,22 @@ def dynamic_token_injection(tool: BaseTool, args: Dict[str, Any], tool_context: 
     return None
 
 # Define the bqoauth Agent with tools and instructions
-# cloud_bqoauth_agent = Agent(
-#     model="gemini-2.5-flash",
-#     name="cloud_bqoauth_agent",
-#     instruction=cloud_bqoauth_agent_instructions,
-#     tools=[app_int_cloud_bqoauth_connector],
-#     generate_content_config=types.GenerateContentConfig(temperature=0.01),
-#     before_tool_callback=dynamic_token_injection
-# )
+cloud_bqoauth_agent = Agent(
+    model="gemini-2.5-flash",
+    name="cloud_bqoauth_agent",
+    instruction=cloud_bqoauth_agent_instructions,
+    tools=[app_int_cloud_bqoauth_connector],
+    generate_content_config=types.GenerateContentConfig(temperature=0.01),
+    before_tool_callback=dynamic_token_injection
+)
 
 # Define the root agent with tools and instructions
 root_agent = Agent(
     model="gemini-2.5-flash",
     name="RootAgent",
     instruction=root_agent_instructions,
-    tools=[app_int_cloud_bqoauth_connector],
+    tools=[AgentTool(agent=cloud_bqoauth_agent)],
     generate_content_config=types.GenerateContentConfig(temperature=0.01),
-    before_tool_callback=dynamic_token_injection
 )
 
 app = App(root_agent=root_agent, name="app")
