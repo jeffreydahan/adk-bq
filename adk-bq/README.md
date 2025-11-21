@@ -1,96 +1,77 @@
-# adk-bq
+# ADK BigQuery Agent
 
-A base ReAct agent built with Google's Agent Development Kit (ADK)
-Agent generated with [`googleCloudPlatform/agent-starter-pack`](https://github.com/GoogleCloudPlatform/agent-starter-pack) version `0.20.4`
+This project contains a GenAI agent built with the Google Agent Development Kit (ADK). The agent is designed to interact with Google BigQuery through an Application Integration connector, allowing users to query datasets using natural language.
 
-## Project Structure
+## Prerequisites
 
-This project is organized as follows:
+Before you begin, ensure you have the following installed:
+- Python 3.10+
+- [Google Cloud SDK](https://cloud.google.com/sdk/install)
+- `uv` (The installation script will handle this if not present)
 
-```
-adk-bq/
-├── app/                 # Core application code
-│   ├── agent.py         # Main agent logic
-│   ├── agent_engine_app.py # Agent Engine application logic
-│   └── app_utils/       # App utilities and helpers
-├── .cloudbuild/         # CI/CD pipeline configurations for Google Cloud Build
-├── deployment/          # Infrastructure and deployment scripts
-├── notebooks/           # Jupyter notebooks for prototyping and evaluation
-├── tests/               # Unit, integration, and load tests
-├── Makefile             # Makefile for common commands
-├── GEMINI.md            # AI-assisted development guide
-└── pyproject.toml       # Project dependencies and configuration
-```
+## Setup
 
-## Requirements
+1.  **Clone the repository:**
+    ```bash
+    git clone <your-repository-url>
+    cd adk-bq
+    ```
 
-Before you begin, ensure you have:
-- **uv**: Python package manager (used for all dependency management in this project) - [Install](https://docs.astral.sh/uv/getting-started/installation/) ([add packages](https://docs.astral.sh/uv/concepts/dependencies/) with `uv add <package>`)
-- **Google Cloud SDK**: For GCP services - [Install](https://cloud.google.com/sdk/docs/install)
-- **Terraform**: For infrastructure deployment - [Install](https://developer.hashicorp.com/terraform/downloads)
-- **make**: Build automation tool - [Install](https://www.gnu.org/software/make/) (pre-installed on most Unix-based systems)
+2.  **Install dependencies:**
+    This command will install all necessary Python packages defined in `pyproject.toml`.
+    ```bash
+    make install
+    ```
 
+3.  **Configure your environment:**
+    Create a `.env` file by copying the example file.
+    ```bash
+    cp .env.example .env
+    ```
+    Now, open the `.env` file and add your specific configuration details:
+    - `GOOGLE_CLOUD_PROJECT`: Your Google Cloud Project ID.
+    - `BQ_AUTHORIZATION_ID`: The Authorization ID for the BigQuery connector in Google Cloud Application Integration.
 
-## Quick Start (Local Testing)
+## Running the Agent Locally
 
-Install required packages and launch the local development environment:
+To test the agent on your local machine, you can use the ADK's built-in web playground.
 
-```bash
-make install && make playground
-```
+1.  **Start the playground:**
+    ```bash
+    make playground
+    ```
 
-## Commands
+2.  **Interact with the agent:**
+    - Open your web browser to `http://localhost:8501`.
+    - In the playground interface, make sure to select the `app` folder from the dropdown menu to interact with this agent.
+    - You can now send messages to the agent, for example: "What are the most popular datasets in BigQuery?"
 
-| Command              | Description                                                                                 |
-| -------------------- | ------------------------------------------------------------------------------------------- |
-| `make install`       | Install all required dependencies using uv                                                  |
-| `make playground`    | Launch Streamlit interface for testing agent locally and remotely |
-| `make deploy`        | Deploy agent to Agent Engine |
-| `make register-gemini-enterprise` | Register deployed agent to Gemini Enterprise ([docs](https://googlecloudplatform.github.io/agent-starter-pack/cli/register_gemini_enterprise.html)) |
-| `make test`          | Run unit and integration tests                                                              |
-| `make lint`          | Run code quality checks (codespell, ruff, mypy)                                             |
-| `make setup-dev-env` | Set up development environment resources using Terraform                         |
+## Testing and Code Quality
 
-For full command options and usage, refer to the [Makefile](Makefile).
+-   **Run tests:**
+    To execute the unit and integration tests, run:
+    ```bash
+    make test
+    ```
 
-
-## Usage
-
-This template follows a "bring your own agent" approach - you focus on your business logic, and the template handles everything else (UI, infrastructure, deployment, monitoring).
-
-1. **Prototype:** Build your Generative AI Agent using the intro notebooks in `notebooks/` for guidance. Use Vertex AI Evaluation to assess performance.
-2. **Integrate:** Import your agent into the app by editing `app/agent.py`.
-3. **Test:** Explore your agent functionality using the Streamlit playground with `make playground`. The playground offers features like chat history, user feedback, and various input types, and automatically reloads your agent on code changes.
-4. **Deploy:** Set up and initiate the CI/CD pipelines, customizing tests as necessary. Refer to the [deployment section](#deployment) for comprehensive instructions. For streamlined infrastructure deployment, simply run `uvx agent-starter-pack setup-cicd`. Check out the [`agent-starter-pack setup-cicd` CLI command](https://googlecloudplatform.github.io/agent-starter-pack/cli/setup_cicd.html). Currently supports GitHub with both Google Cloud Build and GitHub Actions as CI/CD runners.
-5. **Monitor:** Track performance and gather insights using Cloud Logging, Tracing, and the Looker Studio dashboard to iterate on your application.
-
-The project includes a `GEMINI.md` file that provides context for AI tools like Gemini CLI when asking questions about your template.
-
+-   **Lint your code:**
+    To check for code quality and formatting issues, run:
+    ```bash
+    make lint
+    ```
 
 ## Deployment
 
-> **Note:** For a streamlined one-command deployment of the entire CI/CD pipeline and infrastructure using Terraform, you can use the [`agent-starter-pack setup-cicd` CLI command](https://googlecloudplatform.github.io/agent-starter-pack/cli/setup_cicd.html). Currently supports GitHub with both Google Cloud Build and GitHub Actions as CI/CD runners.
+This agent is configured for deployment to Google Cloud.
 
-### Dev Environment
+-   **Deploy to Agent Engine:**
+    The `make deploy` command will package the agent and deploy it to Agent Engine.
+    ```bash
+    make deploy
+    ```
 
-You can test deployment towards a Dev Environment using the following command:
-
-```bash
-gcloud config set project <your-dev-project-id>
-make deploy
-```
-
-
-The repository includes a Terraform configuration for the setup of the Dev Google Cloud project.
-See [deployment/README.md](deployment/README.md) for instructions.
-
-### Production Deployment
-
-The repository includes a Terraform configuration for the setup of a production Google Cloud project. Refer to [deployment/README.md](deployment/README.md) for detailed instructions on how to deploy the infrastructure and application.
-
-
-## Monitoring and Observability
-> You can use [this Looker Studio dashboard](https://lookerstudio.google.com/reporting/46b35167-b38b-4e44-bd37-701ef4307418/page/tEnnC
-) template for visualizing events being logged in BigQuery. See the "Setup Instructions" tab to getting started.
-
-The application uses OpenTelemetry for comprehensive observability with all events being sent to Google Cloud Trace and Logging for monitoring and to BigQuery for long term storage.
+-   **Development Environment:**
+    You can provision a separate development environment in GCP using Terraform.
+    ```bash
+    make setup-dev-env
+    ```
