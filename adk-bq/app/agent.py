@@ -74,6 +74,7 @@ auth_id=os.getenv("BQ_AUTHORIZATION_ID")
 dynamic_auth_param_name = "dynamic_auth_config" # Name of the parameter to inject
 dynamic_auth_internal_key = "oauth2_auth_code_flow.access_token" # Internal key for the token
 
+
 LATEST_ACCESS_TOKEN: Optional[str] = None
 
 def get_local_dev_token() -> str:
@@ -98,8 +99,8 @@ def get_local_dev_token() -> str:
             credentials, project = google.auth.default(scopes=["https://www.googleapis.com/auth/cloud-platform"])
             request = google.auth.transport.requests.Request()
             credentials.refresh(request)
-            logger.info("Running locally in ADK, obtained token using google-auth.")
             token_key = credentials.token
+            logger.info("Running locally in ADK, obtained token_key: %s", token_key)
             
         except Exception as e:
             logger.error(f"Could not get access token using google-auth: {e}")
@@ -145,45 +146,52 @@ def dynamic_token_injection(tool: BaseTool, args: Dict[str, Any], tool_context: 
 
     # Use global scope for the token variable
     global LATEST_ACCESS_TOKEN
-
-    token_state_key = 'temp:'+auth_id+'_0'
+    
+    token_state_key = auth_id
     token_key = tool_context.state.get(token_state_key, None)
+
+    logger.info("Beginning of dynamic_token_injection callback.")
+    logger.info("Current token_key value: %s", token_key)
+    logger.info("Current tool_context.state before adding token: %s", tool_context.state.to_dict())
+    
+    logger.info("LATEST_ACCESS_TOKEN before processing: %s", LATEST_ACCESS_TOKEN)
+
+    # If not found in state, check the global variable
 
     if token_key is None and LATEST_ACCESS_TOKEN is not None:
         logger.info("Token not in tool_context.state, retrieving from global LATEST_ACCESS_TOKEN.")
         token_key = LATEST_ACCESS_TOKEN
-    
-    if token_key is None:
-        token_key = get_local_dev_token()
-
-
-    logger.info(f"token_key is not None. token_key: {token_key}")
-    
-    if token_key:
-        logger.info(f"Token found/retrieved. Storing in tool_context.state and global variable.")
-        
-        # Store in the tool_context.state for the current execution chain (temp: scope)
         tool_context.state[token_state_key] = token_key
+    
+    if token_key is None and LATEST_ACCESS_TOKEN is None:
+        # calling function to get the token.  If it is local, it gets from google-auth.  
+        # if it is in GCP, it returns None so Gemini Enterprise will handle it automatically.
+        logger.info("Token not found in tool_context.state or global variable. Attempting to retrieve/generate token.")
+        token_key = get_local_dev_token()
+        tool_context.state[token_state_key] = token_key
+    
+    if token_key and LATEST_ACCESS_TOKEN is None:
+        logger.info(f"Token found/retrieved.")
         # Update the global variable for persistence across turns (local session fix)
         LATEST_ACCESS_TOKEN = token_key
+        # setting access_token variable for later use
         logger.info("Current tool_context.state after adding token: %s", tool_context.state.to_dict())
-    else:
-        logger.warning("No valid tokens found and could not generate a new one.")
-        return None
-    
-    pattern = re.compile(r'.*'+auth_id+'.*')
+                
+    # pattern = re.compile(r'^temp:'+auth_id+'.*')
     # logger.info("Checking for pattern using regex: %s", pattern.pattern)
 
     state_dict = tool_context.state.to_dict()
-    # logger.info("Current tool context state keys: %s", state_dict)
-    matched_auth = {key: value for key, value in state_dict.items() if pattern.match(key)}
-    if len(matched_auth) > 0:
-        token_key_name = list(matched_auth.keys())[0]
-    else:
-        logger.warning("No valid tokens found")
-        return None
-        
-    access_token = state_dict[token_key_name]
+    logger.info("Current tool context state keys: %s", state_dict)
+    # matched_auth = {key: value for key, value in state_dict.items() if pattern.match(key)}
+    # if len(matched_auth) > 0:
+    #     token_key_name = list(matched_auth.keys())[0]
+    #     # setting access_token variable for later use
+    # else:
+    #     logger.warning("No valid tokens found")
+    #     return None
+    
+    access_token = tool_context.state[token_state_key]
+    logger.info("Final access_token value: %s", access_token)
     dynamic_auth_config = {dynamic_auth_internal_key: access_token}
     args[dynamic_auth_param_name] = json.dumps(dynamic_auth_config)
     logger.info("Injected dynamic_auth_config into args.")
