@@ -32,13 +32,7 @@ from google.adk.tools.base_tool import BaseTool
 import google.auth
 import google.auth.transport.requests
 
-# from fastapi.openapi.models import OAuth2
-# from fastapi.openapi.models import OAuthFlowAuthorizationCode
-# from fastapi.openapi.models import OAuthFlows
-# from google.adk.auth import AuthCredential, AuthCredentialTypes, OAuth2Auth
-# from google.adk.auth.auth_credential import HttpAuth, HttpCredentials
-# from google.adk.tools.tool_context import ToolContext
-# from google.adk.agents.callback_context import CallbackContext
+from google.adk.tools.tool_context import ToolContext
 # from google.oauth2.credentials import Credentials
 
 from .prompts import root_agent_instructions, cloud_bqoauth_agent_instructions
@@ -141,13 +135,24 @@ def dynamic_token_injection(tool: BaseTool, args: Dict[str, Any], tool_context: 
         None. The function modifies the `args` dictionary in place.
     """
     # Call function to get local dev token if agent is running via adk web (locally)
-    token_key = None
+    # token_key = None
     # get local token key if running locally
-    token_key = get_local_dev_token()
+    
+    # check if the token is already in state
+    token_key = tool_context.state.get('temp:'+auth_id+'_0', None)
+
+    if token_key is None:
+        logger.info("token_key is None, attempting to get local dev token.")
+        token_key = get_local_dev_token()
+    
+    logger.info(f"token_key is not None. token_key: {token_key}")
     
     if token_key:
         # running locally and obtained token
+        logger.info(f"Retrieved token_key: {token_key}")
+        logger.info("Current tool context state before adding local token: %s", tool_context.state.to_dict())
         tool_context.state['temp:'+auth_id+'_0'] = token_key
+        logger.info("full state after adding local token: %s", tool_context.state.to_dict())
     
     pattern = re.compile(r'.*'+auth_id+'.*')
     # logger.info("Checking for pattern using regex: %s", pattern.pattern)
@@ -166,6 +171,7 @@ def dynamic_token_injection(tool: BaseTool, args: Dict[str, Any], tool_context: 
     args[dynamic_auth_param_name] = json.dumps(dynamic_auth_config)
     return None
 
+
 # This agent is a sub-agent responsible for interacting with the BigQuery
 # Application Integration connector. It uses the `dynamic_token_injection`
 # callback to handle authentication for its tool calls.
@@ -175,7 +181,7 @@ cloud_bqoauth_agent = Agent(
     instruction=cloud_bqoauth_agent_instructions,
     tools=[app_int_cloud_bqoauth_connector],
     generate_content_config=types.GenerateContentConfig(temperature=0.01),
-    before_tool_callback=dynamic_token_injection
+    before_tool_callback=dynamic_token_injection,
 )
 
 # This is the main agent that the user interacts with. It doesn't have any
